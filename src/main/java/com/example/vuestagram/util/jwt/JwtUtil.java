@@ -2,10 +2,11 @@ package com.example.vuestagram.util.jwt;
 
 import com.example.vuestagram.model.User;
 import com.example.vuestagram.util.jwt.config.JwtConfig;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import io.jsonwebtoken.security.SignatureAlgorithm;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -47,5 +48,28 @@ public class JwtUtil {
                 .setExpiration(new Date(now.getTime() + expiry)) // (토큰 만료시간). 유닉스 타임으로 바껴서 숫자로 계산
                 .signWith(secretKey) // secretKey 설정
                 .compact(); // 토큰 생성
+    }
+
+    // 페이로드(Claims) 추출 및 토크 검증 메소드
+    public Claims getClaims(String token) {
+        return Jwts.parser() // JWT 파서 객체 생성, 만들어진 토큰은 parse(풀다)
+                .verifyWith(this.secretKey) // 서명 검증을 위한 비밀키 설정
+                .build() // 파서 빌드
+                .parseSignedClaims(token) // JWT 파싱 및 검증
+                .getPayload(); // 페이로드(Claims) 반환
+    }
+
+    // 쿠키에서 엑세스 토큰 획득
+    public String getAccessTokenInCookie(HttpServletRequest request) {
+        // Request Header에서 BearerToken 획득
+        String bearerToken = request.getHeader(jwtConfig.getHeaderKey()); // Authorization을 가져오는 것
+        // getHeaderKey로 가보면 Config의 headerKey로 가고 그 값은 yml에 저장되어있음
+
+        // 토큰 존재 여부 체크 & "Bearer"로 시작하는지 체크
+        if(bearerToken == null || !bearerToken.startsWith(jwtConfig.getScheme())) {
+            return null;
+        }
+
+        return bearerToken.substring(jwtConfig.getScheme().length() + 1); // getScheme는 Bearer까지만 가져오니까 빈칸도 포함하기 위해 +1
     }
 }
